@@ -1,48 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
-
-  <title>TinyApp</title>
-  
+  <title>URL - TinyApp Example</title>
 </head>
 
-
 <body>
+  <div class="card text-center">
+      <div class="card-header"></div>
+      <div class="card-body">
+        <h5 class="card-title">TinyURL for: <%= longURL %></h5>
+        <!--Is this link wrong?-->
+        <p class="card-text">Short URL: <a href="/u/<%= shortURL %>"><%= shortURL %></a></p>
+      </div>
+    <div class="card-footer text-muted"></div>
+  </div>
 
-  <main style="margin: 1em;">
-    <h3>My URLs</h3>
+  <!-- Placeholder? -->
+  <a href ='#'>Shorten a new URL</a>
 
-    <!---TABLE--->
-    <table class="table">
-
-      <thead>
-        <tr>
-          <th scope="col">Short URL</th>
-          <th scope="col">Long URL</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        <!--Iterate through urls object, put key and value in columns of the same row-->
-        <% for(let url in urls) { %>
-          <tr>
-            <td><%= url %></td>
-            <td><%= urls[url] %></td>
-          </tr>
-        <% } %>
-      </tbody>
-
-    </table>
-
-    <!-- Placeholder? -->
-    <a href ='#'>Shorten a new URL</a>
-
-  </main>
 
   <!-- Bootstrap JS -->
   <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>

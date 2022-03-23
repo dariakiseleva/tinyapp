@@ -4,6 +4,7 @@ const PORT = 8080; // default port 8080
 
 app.set("view engine", "ejs");
 
+//keep track of URLs and their shortened forms
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
@@ -21,16 +22,11 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+app.get("/urls", (req, res) => {
+  const templateVars = { urls: urlDatabase };
+  res.render('urls_index', templateVars);
+});
 
-app.get("/set", (req, res) => {
-  const a = 1;
-  res.send(`a = ${a}`);
-});
- 
-app.get("/fetch", (req, res) => {
-  //Reference error: a is not defined - seen in the browser
-  res.send(`a = ${a}`);
-});
 
 
 

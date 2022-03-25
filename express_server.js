@@ -53,15 +53,20 @@ app.get("/urls/:shortURL", (req, res) => {
 app.post("/urls", (req, res) => {
   console.log(req.body);  // Log the POST request body to the console, e.g. { longURL: 'DariaK' }
   //body-parser library parses this into a JS object!
-
   //Update the database with randomly generated shortURL and submitted longURL
   const newShortURL = generateRandomString();
   urlDatabase[newShortURL] = req.body.longURL;
-
   //respond with a redirect --> This will make a GET request defined above
   res.redirect(`/urls/${newShortURL}`);
-
 });
+
+//Delete a URL
+app.post("/urls/:shortURL/delete", (req, res) => {
+  const shortURL = req.params.shortURL;
+  delete urlDatabase[shortURL];
+  res.redirect("/urls");
+});
+
 
 //Redirect from shortURL to longURL
 //e.g. http://localhost:8080/u/b2xVn2 will go to http://www.lighthouselabs.ca 

@@ -68,6 +68,15 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 
+//Change a a URL
+app.post("/urls/:shortURL", (req, res) => {
+  const shortURL = req.params.shortURL;
+  const newLongURL = req.body.longURL;
+  // console.log(`Tried to change ${shortURL} to ${newLongURL}`);
+  urlDatabase[shortURL] = newLongURL;
+  res.redirect("/urls");
+});
+
 //Redirect from shortURL to longURL
 //e.g. http://localhost:8080/u/b2xVn2 will go to http://www.lighthouselabs.ca 
 app.get("/u/:shortURL", (req, res) => {

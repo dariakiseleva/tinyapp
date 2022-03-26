@@ -1,5 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const cookieParser = require('cookie-parser')
 
 const app = express();
 const PORT = 8080; // default port 8080
@@ -7,6 +8,7 @@ const PORT = 8080; // default port 8080
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
+app.use(cookieParser());
 
 //keep track of URLs and their shortened forms
 const urlDatabase = {
@@ -30,33 +32,40 @@ function generateRandomString() {
 
 //----------ROUTES
 
+//HOMEPAGE - UPDATE THIS?
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
+//Index with all URLS
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase };
+  const templateVars = { 
+    urls: urlDatabase, 
+    username: req.cookies["username"] 
+  };
   res.render('urls_index', templateVars);
 });
 
+//
 app.get("/urls/new", (req, res) => {
   res.render('urls_new');
 });
 
-
+//
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]};
+  const templateVars = { 
+    shortURL: req.params.shortURL, 
+    longURL: urlDatabase[req.params.shortURL], 
+    username: req.cookies["username"] 
+  };
   res.render('urls_show', templateVars);
 });
 
-//Matches the POST request of the form
+//Adding a new URL - generating a short string and updating database
 app.post("/urls", (req, res) => {
-  console.log(req.body);  // Log the POST request body to the console, e.g. { longURL: 'DariaK' }
-  //body-parser library parses this into a JS object!
-  //Update the database with randomly generated shortURL and submitted longURL
+  console.log(req.body);  
   const newShortURL = generateRandomString();
   urlDatabase[newShortURL] = req.body.longURL;
-  //respond with a redirect --> This will make a GET request defined above
   res.redirect(`/urls/${newShortURL}`);
 });
 
@@ -67,24 +76,35 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect("/urls");
 });
 
-
-//Change a a URL
+//Change a URL
 app.post("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const newLongURL = req.body.longURL;
-  // console.log(`Tried to change ${shortURL} to ${newLongURL}`);
   urlDatabase[shortURL] = newLongURL;
   res.redirect("/urls");
 });
 
-//Redirect from shortURL to longURL
-//e.g. http://localhost:8080/u/b2xVn2 will go to http://www.lighthouselabs.ca 
+//Redirect from shortURL to longURL 
 app.get("/u/:shortURL", (req, res) => {
   const longURL = urlDatabase[req.params.shortURL];
   res.redirect(longURL);
 });
 
 
+app.post("/login", (req, res) => {
+  const loginUsername = req.body.username;
+  //console.log('Cookies: ', req.cookies)
+  res.cookie("username", loginUsername, {});
+  //console.log(req.cookies["username"]);
+  res.redirect("/urls");
+});
+
+app.post("/logout", (req, res) => {
+  res.clearCookie('username', {})
+  res.redirect("/urls");
+});
+
+//---------------------------------------------------------
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });

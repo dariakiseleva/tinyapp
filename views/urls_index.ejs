@@ -17,6 +17,11 @@
   <%- include('partials/_header') %>
   
   <main style="margin: 1em;">
+
+    <%if (!user) { %>
+      <h3>Nothing to display - please login or register!</h3>
+    <% } else { %>
+
     <h3>My URLs</h3>
 
     <!---TABLE--->
@@ -33,10 +38,11 @@
 
       <tbody>
         <!--Iterate through urls object, put key and value in columns of the same row-->
+
         <% for(let url in urls) { %>
           <tr>
             <td><%= url %></td>
-            <td><%= urls[url] %></td>
+            <td><%= urls[url].longURL %></td>
             <!-- EDIT -->
             <td>
               <form method="GET" action='/urls/<%= url %>'>
@@ -55,6 +61,8 @@
       </tbody>
 
     </table>
+
+    <% } %>
 
 
   </main>

@@ -14,24 +14,39 @@ app.use(cookieParser());
 //----------DATA
 
 //Users
-const users = { 
-//   "userRandomID": {
-//     id: "userRandomID", 
-//     email: "user@example.com", 
-//     password: "purple-monkey-dinosaur"
-//   },
+const users = {
+  // "userID1" : {
+  //   id: userID1,
+  //   email: something@gmail.com,
+  //   password: 12345
+  // }, 
+  // "userID2": ... etc.
 }
 
 
 
 //keep track of URLs and their shortened forms
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  // "shortURL1": {
+  //   longURL: "http://..."
+  //   userID: userID1
+  // }, 
+  // "shortURL2": ... etc
 };
 
 
 //----------HELPER FUNCTIONS
+
+//filter the URLs database so that only URLs of the user are included
+const urlsForUser = (id) => {
+  const filteredUrlDatabase = {};
+  for (let key of Object.keys(urlDatabase)){
+    if (urlDatabase[key].userID === id){
+      filteredUrlDatabase[key] = urlDatabase[key];
+    }
+  }
+  return filteredUrlDatabase;
+}
 
 //return 6 random alphanumeric characters
 function generateRandomString() {
@@ -45,7 +60,6 @@ function generateRandomString() {
 }
 
 //Email lookup
-
 const emailExists = (email, listOfUsers) => {
   for (let key of Object.keys(listOfUsers)){
     if (listOfUsers[key].email === email){
@@ -115,43 +129,70 @@ app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
-//Index with all URLS
+//Display the My URLs page
 app.get("/urls", (req, res) => {
   const templateVars = { 
-    urls: urlDatabase, 
+    //urls: urlDatabase,
+    urls: urlsForUser(req.cookies["user_id"]),
     user: users[req.cookies["user_id"]]
   };
+  console.log(templateVars.urls);
   res.render('urls_index', templateVars);
 });
 
-//Add new URL
+//Display page to add a new URL
 app.get("/urls/new", (req, res) => {
+
+  //If a user is NOT signed in, redirect them to the login page
+  if (!users[req.cookies["user_id"]]){
+    return res.redirect("/login");
+  }
+
   const templateVars = { 
     user: users[req.cookies["user_id"]] 
   };
-  res.render('urls_new', templateVars);
+  return res.render('urls_new', templateVars);
 });
 
 //Page with one URL
 app.get("/urls/:shortURL", (req, res) => {
   const templateVars = { 
     shortURL: req.params.shortURL, 
-    longURL: urlDatabase[req.params.shortURL], 
-    user: users[req.cookies["user_id"]] 
+    longURL: urlDatabase[req.params.shortURL].longURL, 
+    user: users[req.cookies["user_id"]]
   };
   res.render('urls_show', templateVars);
 });
 
-//Adding a new URL - generating a short string and updating database
+//Add a new URL - generating a short string and updating database
 app.post("/urls", (req, res) => {
+
+  //If a user is NOT signed in, return an error
+  if (!users[req.cookies["user_id"]]){
+    res.status(403);
+    return res.send("ERROR 403. Must be signed in to add a new URL.");
+  }
+
   const newShortURL = generateRandomString();
-  urlDatabase[newShortURL] = req.body.longURL;
-  res.redirect(`/urls/${newShortURL}`);
+  urlDatabase[newShortURL] = {
+    longURL: req.body.longURL,
+    userID: req.cookies["user_id"]
+  }
+  
+  console.log(urlDatabase); //<-------------------------------------------
+  return res.redirect(`/urls/${newShortURL}`);
 });
 
 //Delete a URL
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
+
+  //Ensure the deletion is being made by the owner of the URL
+  if (!req.cookies["user_id"] || (urlDatabase[shortURL].userID !== req.cookies["user_id"])){
+    res.status(403);
+    return res.send("Error 403. You are not authorized to delete this URL.")
+  }
+
   delete urlDatabase[shortURL];
   res.redirect("/urls");
 });
@@ -159,14 +200,24 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 //Change a URL
 app.post("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
+
+  //Ensure the change is being made by the owner of the URL
+  if (!req.cookies["user_id"] || (urlDatabase[shortURL].userID !== req.cookies["user_id"])){
+    res.status(403);
+    return res.send("Error 403. You are not authorized to change this URL.")
+  }
+
   const newLongURL = req.body.longURL;
-  urlDatabase[shortURL] = newLongURL;
-  res.redirect("/urls");
+  urlDatabase[shortURL] = {
+    longURL: newLongURL,
+    userID: req.cookies["user_id"]
+  }
+  return res.redirect("/urls");
 });
 
 //Redirect from shortURL to longURL 
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
 
@@ -178,10 +229,16 @@ app.post("/logout", (req, res) => {
 
 //Display registration page
 app.get("/register", (req, res) => {
+
+  //If a user is signed in, redirect from this page
+  if (users[req.cookies["user_id"]]){
+    return res.redirect("/urls");
+  }
+
   const templateVars = {
     user: users[req.cookies["user_id"]]
   };
-  res.render("register", templateVars);
+  return res.render("register", templateVars);
 });
 
 //Process a registration
@@ -190,12 +247,12 @@ app.post("/register", (req, res) => {
 
   if (error==="Email exists") {
     res.status(400);
-    return res.send("<b>ERROR 400.</b><br>That email already exists!");
+    return res.send("ERROR 400. That email already exists!");
   }
 
   if (error==="Incomplete") {
     res.status(400);
-    return res.send("<b>ERROR 400.</b><br>Please enter ALL info!");
+    return res.send("ERROR 400. Please enter ALL info!");
   }
   
   res.cookie("user_id", data.id);
@@ -204,10 +261,16 @@ app.post("/register", (req, res) => {
 
 //Display login page
 app.get("/login", (req, res) => {
+
+  //If a user is signed in, redirect from this page
+  if (users[req.cookies["user_id"]]){
+    return res.redirect("/urls");
+  }
+
   const templateVars = {
     user: users[req.cookies["user_id"]]
   };
-  res.render("login", templateVars);
+  return res.render("login", templateVars);
 });
 
 //Process a login
@@ -216,17 +279,17 @@ app.post("/login", (req, res) => {
 
   if (error==="Incomplete") {
     res.status(400);
-    return res.send("<b>ERROR 400.</b><br>Please enter ALL info!");
+    return res.send("ERROR 400. Please enter ALL info!");
   }
 
   if (error==="Email not found") {
     res.status(403);
-    return res.send("<b>ERROR 400.</b><br>Email not found.");
+    return res.send("ERROR 403. Email not found.");
   }
 
   if (error==="Wrong password") {
     res.status(403);
-    return res.send("<b>ERROR 400.</b><br>Wrong password.");
+    return res.send("ERROR 403. Wrong password.");
   }
 
   res.cookie("user_id", id);

@@ -16,23 +16,32 @@
     </div>
 
     <!-- IF COOKIE IS SET: USERNAME AND LOGOUT -->
-    <% if (username) { %>
+    <% if (user) { %>
 
-    <h1 class="navbar-brand" style="color: #101517; margin-top: 0; margin-bottom: 5px; padding-top: 20">Logged in as: <%= username %></h1>
+    <h1 class="navbar-brand" style="color: #101517; margin-top: 0; margin-bottom: 5px; padding-top: 20">Logged in as: <%= user.email %></h1>
 
     <form method="POST" action='/logout'>
-      <button style="background-color: transparent; color: #101517; border-color: #101517" type="submit" class="btn btn-primary">LOGOUT</button>
+      <button style="background-color: transparent; color: #101517; border-color: #101517" type="submit" class="btn btn-primary">Logout</button>
     </form>
 
     <!-- IF NO COOKIE: LOGIN -->
     <% } else { %>
-    
-    <form class="form-inline" action="/login" method="POST">
-      <div class="form-group mb-2">
-        <input  name="username" style="margin-top: 0; margin-bottom: 0; margin-right: 10px" class="form-control" type="text" placeholder="Username" style="width: 200px; margin: 1em">
-        <button style="background-color: transparent; color: #101517; border-color: #101517" type="submit" class="btn btn-primary">Submit</button>
+
+    <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+      <div class="navbar-nav">
+        <a class="nav-item nav-link" href="/login">Login</a>
+        <a class="nav-item nav-link" href="/register">Register</a>
       </div>
+    </div>
+
+    <!-- <form method="GET" action='/register'>
+      <button style="background-color: transparent; color: #101517; border-color: #101517; margin-right: 10px" type="submit" class="btn btn-primary">Register</button>
     </form>
+
+    <form method="GET" action='/login'>
+      <button style="background-color: transparent; color: #101517; border-color: #101517" type="submit" class="btn btn-primary">Login</button>
+    </form> -->
+    
 
     <% } %>
 

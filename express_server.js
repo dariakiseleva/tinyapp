@@ -43,7 +43,7 @@ const urlDatabase = {
 //----------HELPER FUNCTIONS
 
 //filter the URLs database so that only URLs of the user are included
-const urlsForUser = (id) => {
+const urlsForUser = (id, urlDatabase) => {
   const filteredUrlDatabase = {};
   for (let key of Object.keys(urlDatabase)){
     if (urlDatabase[key].userID === id){
@@ -64,18 +64,8 @@ function generateRandomString() {
   return randomString;
 }
 
-//Email lookup
-const emailExists = (email, listOfUsers) => {
-  for (let key of Object.keys(listOfUsers)){
-    if (listOfUsers[key].email === email){
-      return true;
-    }
-  }
-  return false;
-}
-
 //register a new user
-const createUser = (userInfo, listOfUsers) => {
+const createUser = (userInfo, users) => {
 
   const {email} = userInfo;
   const password = bcrypt.hashSync(userInfo.password, 10);
@@ -84,48 +74,46 @@ const createUser = (userInfo, listOfUsers) => {
     return {error: "Incomplete", data: null};
   }
 
-  if (emailExists(email, listOfUsers)){
+  if (getUserByEmail(email, users)){
     return {error: "Email exists", data: null};
   }
 
   let id = generateRandomString();
 
   const newUser = {id, email, password};
-  listOfUsers[id] = newUser;
-
+  users[id] = newUser;
   return {error: null, data: newUser};
 
 }
 
-//See if email and password are a match in list of users. If yes, return id. If not, mark as error
-const emailMatchesPassword = (email, password, listOfUsers) => {
-  for (let key of Object.keys(listOfUsers)){
-    if (listOfUsers[key].email === email && bcrypt.compareSync(password, listOfUsers[key].password)) {
-      return {error: false, user_id: listOfUsers[key].id};
+const getUserByEmail = (email, users) => {
+  for (let key of Object.keys(users)){
+    if(users[key].email === email){
+      return users[key];
     }
   }
-  return {error: true, user_id: null};
+  return null;
 }
 
 //Check if login email and password are fully valid
-const authenticateUser = (userInfo, listOfUsers) => {
+const authenticateUser = (userInfo, users) => {
   const {email, password} = userInfo;
 
   if (!email || !password){
     return {error: "Incomplete", id: null};
   }
 
-  if (!emailExists(email, listOfUsers)){
+  const user = getUserByEmail(email, users);
+
+  if (!user){
     return {error: "Email not found", data: null};
   }
 
-  const {error, user_id} = emailMatchesPassword(email, password, listOfUsers);
-
-  if(error){
+  if (!bcrypt.compareSync(password, user.password)) {
     return {error: "Wrong password", data: null};
   }
 
-  return {error: null, id: user_id};
+  return {error: null, id: user.id};
 }
 
 //----------ROUTES
@@ -148,7 +136,7 @@ app.get("/urls", (req, res) => {
   }
 
   const templateVars = { 
-    urls: urlsForUser(req.session.user_id),
+    urls: urlsForUser(req.session.user_id, urlDatabase),
     user: users[req.session.user_id]
   };
   return res.render('urls_index', templateVars);

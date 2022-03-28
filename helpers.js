@@ -14,7 +14,7 @@ const urlsForUser = (id, database) => {
 }
 
 //return 6 random alphanumeric characters
-function generateRandomString() {
+const generateRandomString = () => {
   let randomString = '';
   let alphaNumChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   for ( let i = 0; i < 6; i++ ) {
@@ -25,7 +25,7 @@ function generateRandomString() {
 }
 
 //register a new user
-const createUser = function(userInfo, database) {
+const createUser = (userInfo, database) => {
 
   const {email} = userInfo;
   const password = bcrypt.hashSync(userInfo.password, 10);
@@ -47,7 +47,7 @@ const createUser = function(userInfo, database) {
 }
 
 //Return user object stored in a database that has the given email
-function getUserByEmail (email, database) {
+const getUserByEmail = (email, database) => {
   for (let key of Object.keys(database)){
     if(database[key].email === email){
       return database[key];
@@ -77,4 +77,16 @@ const authenticateUser = (userInfo, database) => {
   return {error: null, id: user.id};
 }
 
-module.exports = { urlsForUser, generateRandomString, createUser, getUserByEmail, authenticateUser};
+//Get current timestamp (as string)
+const getTimestamp = () => {
+  const date = new Date();
+  const yyyy = date.getFullYear();
+  const mo = date.getMonth()+1;
+  const dd = date.getDate();
+  const hh = date.getHours();
+  const mi = date.getMinutes();
+  const ss = date.getSeconds();
+  return `${yyyy}-${mo}-${dd} ${hh}:${mi}:${ss}`;
+}
+
+module.exports = { urlsForUser, generateRandomString, createUser, getUserByEmail, authenticateUser, getTimestamp};

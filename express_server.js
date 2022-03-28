@@ -1,13 +1,11 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-//const bcrypt = require('bcryptjs');
 const cookieSession = require('cookie-session');
 
 
+//----------Set up the APP
 const app = express();
 const PORT = 8080; // default port 8080
-
-
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieSession({
@@ -16,38 +14,22 @@ app.use(cookieSession({
 }));
 
 
-//----------HELPER FUNCTIONS
+//----------HELPER FUNCTIONS AND DATA 
 
-const {urlsForUser, generateRandomString, createUser, authenticateUser} = require("./helpers");
-
-//----------DATA
-
-//Users
-const users = {
-  // "userID1" : {
-  //   id: userID1,
-  //   email: something@gmail.com,
-  //   password: 12345
-  // }, 
-  // "userID2": ... etc.
-}
-
-//keep track of URLs and their shortened forms
-const urlDatabase = {
-  // "shortURL1": {
-  //   longURL: "http://..."
-  //   userID: userID1
-  // }, 
-  // "shortURL2": ... etc
-}
-
+const {urlsForUser, generateRandomString, createUser, authenticateUser, getTimestamp} = require("./helpers");
+const {users, urlDatabase} = require("./data");
 
 
 //----------ROUTES
 
-//HOMEPAGE - UPDATE THIS?
+
+//Homepage
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  //Redirect depending on sign-in status
+  if (users[req.session.user_id]){
+    return res.redirect("/urls");
+  }
+  return res.redirect("/login");
 });
 
 //Display the My URLs page
@@ -89,7 +71,6 @@ app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
 
   //Ensure that only the owner of the URL can see this page, otherwise display error
-
   if (!req.session.user_id || (urlDatabase[shortURL]?.userID !== req.session.user_id)){
     const templateVars = {
       user: users[req.session.user_id], 
@@ -100,8 +81,11 @@ app.get("/urls/:shortURL", (req, res) => {
 
   const templateVars = { 
     shortURL, 
-    longURL: urlDatabase[shortURL].longURL, 
-    user: users[req.session.user_id]
+    longURL: urlDatabase[shortURL].longURL,
+    totalVisits: urlDatabase[shortURL].totalVisits,
+    uniqueVisitors: urlDatabase[shortURL].uniqueVisitors,
+    user: users[req.session.user_id],
+    visitDetails: urlDatabase[shortURL].visitDetails
   };
 
   return res.render('urls_show', templateVars);
@@ -112,7 +96,6 @@ app.post("/urls", (req, res) => {
 
   //If a user is NOT signed in, return an error
   if (!users[req.session.user_id]){
-
     const templateVars = {
       user: users[req.session.user_id], 
       errorMessage: "You must be signed in to add a new URL."
@@ -124,7 +107,11 @@ app.post("/urls", (req, res) => {
   const newShortURL = generateRandomString();
   urlDatabase[newShortURL] = {
     longURL: req.body.longURL,
-    userID: req.session.user_id
+    userID: req.session.user_id,
+    totalVisits: 0, 
+    uniqueVisitors: 0,
+    visitorCookies: [],
+    visitDetails: []
   }
 
   return res.redirect(`/urls/${newShortURL}`);
@@ -170,7 +157,22 @@ app.post("/urls/:shortURL", (req, res) => {
 
 //Redirect from shortURL to longURL 
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL].longURL;
+  const shortURL = req.params.shortURL;
+  const longURL = urlDatabase[shortURL].longURL;
+
+  //Increase total visits
+  urlDatabase[shortURL].totalVisits++;
+
+  //If a new unique visitor, increment count and store cookie
+  if (!urlDatabase[shortURL].visitorCookies.includes(req.session.user_id)){
+    urlDatabase[shortURL].visitorCookies.push(req.session.user_id);
+    urlDatabase[shortURL].uniqueVisitors++;
+  }
+
+  //Record Visit Details
+  urlDatabase[shortURL].visitDetails.push({timestamp: getTimestamp(), userID: req.session.user_id});
+
+  // Redirect to long URL
   res.redirect(longURL);
 });
 
@@ -228,7 +230,6 @@ app.get("/login", (req, res) => {
   if (users[req.session.user_id]){
     return res.redirect("/urls");
   }
-
   const templateVars = {
     user: users[req.session.user_id]
   };
@@ -263,12 +264,14 @@ app.post("/login", (req, res) => {
     return res.status(403).render("error", templateVars);
   }
 
+  //Set cookie
   req.session.user_id = id;
   return res.redirect("/urls");
 });
 
 
 //---------------------------------------------------------
+
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });

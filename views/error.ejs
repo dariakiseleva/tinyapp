@@ -18,46 +18,7 @@
   
   <main style="margin: 1em;">
 
-    <h3>My URLs</h3>
-
-    <!---TABLE--->
-    <table class="table">
-
-      <thead>
-        <tr>
-          <th scope="col">Short URL</th>
-          <th scope="col">Long URL</th>
-          <th scope="col">Edit</th>
-          <th scope="col">Delete</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        <!--Iterate through urls object, put key and value in columns of the same row-->
-
-        <% for(let url in urls) { %>
-          <tr>
-            <td><%= url %></td>
-            <td><%= urls[url].longURL %></td>
-            <!-- EDIT -->
-            <td>
-              <form method="GET" action='/urls/<%= url %>'>
-                <button type="submit" class="btn btn-primary" style="color: dodgerblue; background: white; border-color: dodgerblue">EDIT</button>
-              </form>
-            </td>
-            <!-- DELETE -->
-            <td> 
-              <form method="POST" action='/urls/<%= url %>/delete'>
-                <button type="submit" class="btn btn-primary" style="color: red; background: white; border-color: red">Delete</button>
-              </form>
-            </td>
-
-          </tr>
-        <% } %>
-      </tbody>
-
-    </table>
-
+    <h3><%= errorMessage %></h3>
 
   </main>
 

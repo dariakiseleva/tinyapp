@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const cookieParser = require('cookie-parser')
+const cookieParser = require('cookie-parser');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const PORT = 8080; // default port 8080
@@ -72,7 +73,8 @@ const emailExists = (email, listOfUsers) => {
 //register a new user
 const createUser = (userInfo, listOfUsers) => {
 
-  const {email, password} = userInfo;
+  const {email} = userInfo;
+  const password = bcrypt.hashSync(userInfo.password, 10);
 
   if (!email || !password){
     return {error: "Incomplete", data: null};
@@ -94,7 +96,7 @@ const createUser = (userInfo, listOfUsers) => {
 //See if email and password are a match in list of users. If yes, return id. If not, mark as error
 const emailMatchesPassword = (email, password, listOfUsers) => {
   for (let key of Object.keys(listOfUsers)){
-    if (listOfUsers[key].email === email && listOfUsers[key].password===password){
+    if (listOfUsers[key].email === email && bcrypt.compareSync(password, listOfUsers[key].password)) {
       return {error: false, user_id: listOfUsers[key].id};
     }
   }
@@ -131,13 +133,21 @@ app.get("/", (req, res) => {
 
 //Display the My URLs page
 app.get("/urls", (req, res) => {
+
+  //Do not display if user is not logged in
+  if (!users[req.cookies["user_id"]]){
+    const templateVars = {
+      user: users[req.cookies["user_id"]], 
+      errorMessage: "You must register or login to create your own URLs."
+    };
+    return res.status(403).render("error", templateVars);
+  }
+
   const templateVars = { 
-    //urls: urlDatabase,
     urls: urlsForUser(req.cookies["user_id"]),
     user: users[req.cookies["user_id"]]
   };
-  console.log(templateVars.urls);
-  res.render('urls_index', templateVars);
+  return res.render('urls_index', templateVars);
 });
 
 //Display page to add a new URL
@@ -154,14 +164,28 @@ app.get("/urls/new", (req, res) => {
   return res.render('urls_new', templateVars);
 });
 
-//Page with one URL
+//Display page with one URL
 app.get("/urls/:shortURL", (req, res) => {
+
+  const shortURL = req.params.shortURL;
+
+  //Ensure that only the owner of the URL can see this page, otherwise display error
+
+  if (!req.cookies["user_id"] || (urlDatabase[shortURL]?.userID !== req.cookies["user_id"])){
+    const templateVars = {
+      user: users[req.cookies["user_id"]], 
+      errorMessage: "Only the owner of this URL can view it."
+    };
+    return res.status(403).render("error", templateVars);
+  }
+
   const templateVars = { 
-    shortURL: req.params.shortURL, 
-    longURL: urlDatabase[req.params.shortURL].longURL, 
+    shortURL, 
+    longURL: urlDatabase[shortURL].longURL, 
     user: users[req.cookies["user_id"]]
   };
-  res.render('urls_show', templateVars);
+
+  return res.render('urls_show', templateVars);
 });
 
 //Add a new URL - generating a short string and updating database
@@ -169,8 +193,13 @@ app.post("/urls", (req, res) => {
 
   //If a user is NOT signed in, return an error
   if (!users[req.cookies["user_id"]]){
-    res.status(403);
-    return res.send("ERROR 403. Must be signed in to add a new URL.");
+
+    const templateVars = {
+      user: users[req.cookies["user_id"]], 
+      errorMessage: "You must be signed in to add a new URL."
+    };
+    return res.status(403).render("error", templateVars);
+
   }
 
   const newShortURL = generateRandomString();
@@ -178,8 +207,7 @@ app.post("/urls", (req, res) => {
     longURL: req.body.longURL,
     userID: req.cookies["user_id"]
   }
-  
-  console.log(urlDatabase); //<-------------------------------------------
+
   return res.redirect(`/urls/${newShortURL}`);
 });
 
@@ -189,8 +217,11 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
   //Ensure the deletion is being made by the owner of the URL
   if (!req.cookies["user_id"] || (urlDatabase[shortURL].userID !== req.cookies["user_id"])){
-    res.status(403);
-    return res.send("Error 403. You are not authorized to delete this URL.")
+    const templateVars = {
+      user: users[req.cookies["user_id"]], 
+      errorMessage: "Only the owner of this URL can delete it."
+    };
+    return res.status(403).render("error", templateVars);
   }
 
   delete urlDatabase[shortURL];
@@ -203,8 +234,11 @@ app.post("/urls/:shortURL", (req, res) => {
 
   //Ensure the change is being made by the owner of the URL
   if (!req.cookies["user_id"] || (urlDatabase[shortURL].userID !== req.cookies["user_id"])){
-    res.status(403);
-    return res.send("Error 403. You are not authorized to change this URL.")
+    const templateVars = {
+      user: users[req.cookies["user_id"]], 
+      errorMessage: "Only the owner of this URL can edit it."
+    };
+    return res.status(403).render("error", templateVars);
   }
 
   const newLongURL = req.body.longURL;
@@ -245,16 +279,25 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   const {error, data} = createUser(req.body, users);
 
+  //If email exists, display error
   if (error==="Email exists") {
-    res.status(400);
-    return res.send("ERROR 400. That email already exists!");
+    const templateVars = {
+      user: users[req.cookies["user_id"]], 
+      errorMessage: "This email already exists, try again."
+    };
+    return res.status(400).render("error", templateVars);
   }
 
+  //If form not fully complete, display error
   if (error==="Incomplete") {
-    res.status(400);
-    return res.send("ERROR 400. Please enter ALL info!");
+    const templateVars = {
+      user: users[req.cookies["user_id"]], 
+      errorMessage: "Incomplete info, try again."
+    };
+    return res.status(400).render("error", templateVars);
   }
   
+  //If no errors, set cookie and redirect to URLs index page
   res.cookie("user_id", data.id);
   return res.redirect("/urls");
 });
@@ -278,18 +321,27 @@ app.post("/login", (req, res) => {
   const {error, id} = authenticateUser(req.body, users);
 
   if (error==="Incomplete") {
-    res.status(400);
-    return res.send("ERROR 400. Please enter ALL info!");
+    const templateVars = {
+      user: users[req.cookies["user_id"]], 
+      errorMessage: "Incomplete info, try again."
+    };
+    return res.status(400).render("error", templateVars);
   }
 
   if (error==="Email not found") {
-    res.status(403);
-    return res.send("ERROR 403. Email not found.");
+    const templateVars = {
+      user: users[req.cookies["user_id"]], 
+      errorMessage: "Email not found."
+    };
+    return res.status(403).render("error", templateVars);
   }
 
   if (error==="Wrong password") {
-    res.status(403);
-    return res.send("ERROR 403. Wrong password.");
+    const templateVars = {
+      user: users[req.cookies["user_id"]], 
+      errorMessage: "Wrong password!"
+    };
+    return res.status(403).render("error", templateVars);
   }
 
   res.cookie("user_id", id);

@@ -43,14 +43,14 @@ const urlDatabase = {
 //----------HELPER FUNCTIONS
 
 //filter the URLs database so that only URLs of the user are included
-const urlsForUser = (id, urlDatabase) => {
-  const filteredUrlDatabase = {};
-  for (let key of Object.keys(urlDatabase)){
+const urlsForUser = (id, database) => {
+  const filteredDatabase = {};
+  for (let key of Object.keys(database)){
     if (urlDatabase[key].userID === id){
-      filteredUrlDatabase[key] = urlDatabase[key];
+      filteredDatabase[key] = database[key];
     }
   }
-  return filteredUrlDatabase;
+  return filteredDatabase;
 }
 
 //return 6 random alphanumeric characters
@@ -65,7 +65,7 @@ function generateRandomString() {
 }
 
 //register a new user
-const createUser = (userInfo, users) => {
+const createUser = (userInfo, database) => {
 
   const {email} = userInfo;
   const password = bcrypt.hashSync(userInfo.password, 10);
@@ -74,36 +74,36 @@ const createUser = (userInfo, users) => {
     return {error: "Incomplete", data: null};
   }
 
-  if (getUserByEmail(email, users)){
+  if (getUserByEmail(email, database)){
     return {error: "Email exists", data: null};
   }
 
   let id = generateRandomString();
 
   const newUser = {id, email, password};
-  users[id] = newUser;
+  database[id] = newUser;
   return {error: null, data: newUser};
 
 }
 
-const getUserByEmail = (email, users) => {
-  for (let key of Object.keys(users)){
-    if(users[key].email === email){
-      return users[key];
+const getUserByEmail = (email, database) => {
+  for (let key of Object.keys(database)){
+    if(database[key].email === email){
+      return database[key];
     }
   }
   return null;
 }
 
 //Check if login email and password are fully valid
-const authenticateUser = (userInfo, users) => {
+const authenticateUser = (userInfo, database) => {
   const {email, password} = userInfo;
 
   if (!email || !password){
     return {error: "Incomplete", id: null};
   }
 
-  const user = getUserByEmail(email, users);
+  const user = getUserByEmail(email, database);
 
   if (!user){
     return {error: "Email not found", data: null};

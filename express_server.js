@@ -1,7 +1,8 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
+const cookieSession = require('cookie-session');
+
 
 const app = express();
 const PORT = 8080; // default port 8080
@@ -9,7 +10,10 @@ const PORT = 8080; // default port 8080
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2']
+}));
 
 
 //----------DATA
@@ -135,17 +139,17 @@ app.get("/", (req, res) => {
 app.get("/urls", (req, res) => {
 
   //Do not display if user is not logged in
-  if (!users[req.cookies["user_id"]]){
+  if (!users[req.session.user_id]){
     const templateVars = {
-      user: users[req.cookies["user_id"]], 
+      user: users[req.session.user_id], 
       errorMessage: "You must register or login to create your own URLs."
     };
     return res.status(403).render("error", templateVars);
   }
 
   const templateVars = { 
-    urls: urlsForUser(req.cookies["user_id"]),
-    user: users[req.cookies["user_id"]]
+    urls: urlsForUser(req.session.user_id),
+    user: users[req.session.user_id]
   };
   return res.render('urls_index', templateVars);
 });
@@ -154,12 +158,12 @@ app.get("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
 
   //If a user is NOT signed in, redirect them to the login page
-  if (!users[req.cookies["user_id"]]){
+  if (!users[req.session.user_id]){
     return res.redirect("/login");
   }
 
   const templateVars = { 
-    user: users[req.cookies["user_id"]] 
+    user: users[req.session.user_id] 
   };
   return res.render('urls_new', templateVars);
 });
@@ -171,9 +175,9 @@ app.get("/urls/:shortURL", (req, res) => {
 
   //Ensure that only the owner of the URL can see this page, otherwise display error
 
-  if (!req.cookies["user_id"] || (urlDatabase[shortURL]?.userID !== req.cookies["user_id"])){
+  if (!req.session.user_id || (urlDatabase[shortURL]?.userID !== req.session.user_id)){
     const templateVars = {
-      user: users[req.cookies["user_id"]], 
+      user: users[req.session.user_id], 
       errorMessage: "Only the owner of this URL can view it."
     };
     return res.status(403).render("error", templateVars);
@@ -182,7 +186,7 @@ app.get("/urls/:shortURL", (req, res) => {
   const templateVars = { 
     shortURL, 
     longURL: urlDatabase[shortURL].longURL, 
-    user: users[req.cookies["user_id"]]
+    user: users[req.session.user_id]
   };
 
   return res.render('urls_show', templateVars);
@@ -192,10 +196,10 @@ app.get("/urls/:shortURL", (req, res) => {
 app.post("/urls", (req, res) => {
 
   //If a user is NOT signed in, return an error
-  if (!users[req.cookies["user_id"]]){
+  if (!users[req.session.user_id]){
 
     const templateVars = {
-      user: users[req.cookies["user_id"]], 
+      user: users[req.session.user_id], 
       errorMessage: "You must be signed in to add a new URL."
     };
     return res.status(403).render("error", templateVars);
@@ -205,7 +209,7 @@ app.post("/urls", (req, res) => {
   const newShortURL = generateRandomString();
   urlDatabase[newShortURL] = {
     longURL: req.body.longURL,
-    userID: req.cookies["user_id"]
+    userID: req.session.user_id
   }
 
   return res.redirect(`/urls/${newShortURL}`);
@@ -216,9 +220,9 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
 
   //Ensure the deletion is being made by the owner of the URL
-  if (!req.cookies["user_id"] || (urlDatabase[shortURL].userID !== req.cookies["user_id"])){
+  if (!req.session.user_id || (urlDatabase[shortURL].userID !== req.session.user_id)){
     const templateVars = {
-      user: users[req.cookies["user_id"]], 
+      user: users[req.session.user_id], 
       errorMessage: "Only the owner of this URL can delete it."
     };
     return res.status(403).render("error", templateVars);
@@ -233,9 +237,9 @@ app.post("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
 
   //Ensure the change is being made by the owner of the URL
-  if (!req.cookies["user_id"] || (urlDatabase[shortURL].userID !== req.cookies["user_id"])){
+  if (!req.session.user_id || (urlDatabase[shortURL].userID !== req.session.user_id)){
     const templateVars = {
-      user: users[req.cookies["user_id"]], 
+      user: users[req.session.user_id], 
       errorMessage: "Only the owner of this URL can edit it."
     };
     return res.status(403).render("error", templateVars);
@@ -244,7 +248,7 @@ app.post("/urls/:shortURL", (req, res) => {
   const newLongURL = req.body.longURL;
   urlDatabase[shortURL] = {
     longURL: newLongURL,
-    userID: req.cookies["user_id"]
+    userID: req.session.user_id
   }
   return res.redirect("/urls");
 });
@@ -257,7 +261,7 @@ app.get("/u/:shortURL", (req, res) => {
 
 //Logout
 app.post("/logout", (req, res) => {
-  res.clearCookie('user_id', {})
+  req.session = null;
   res.redirect("/urls");
 });
 
@@ -265,12 +269,12 @@ app.post("/logout", (req, res) => {
 app.get("/register", (req, res) => {
 
   //If a user is signed in, redirect from this page
-  if (users[req.cookies["user_id"]]){
+  if (users[req.session.user_id]){
     return res.redirect("/urls");
   }
 
   const templateVars = {
-    user: users[req.cookies["user_id"]]
+    user: users[req.session.user_id]
   };
   return res.render("register", templateVars);
 });
@@ -282,7 +286,7 @@ app.post("/register", (req, res) => {
   //If email exists, display error
   if (error==="Email exists") {
     const templateVars = {
-      user: users[req.cookies["user_id"]], 
+      user: users[req.session.user_id], 
       errorMessage: "This email already exists, try again."
     };
     return res.status(400).render("error", templateVars);
@@ -291,14 +295,14 @@ app.post("/register", (req, res) => {
   //If form not fully complete, display error
   if (error==="Incomplete") {
     const templateVars = {
-      user: users[req.cookies["user_id"]], 
+      user: users[req.session.user_id], 
       errorMessage: "Incomplete info, try again."
     };
     return res.status(400).render("error", templateVars);
   }
   
   //If no errors, set cookie and redirect to URLs index page
-  res.cookie("user_id", data.id);
+  req.session.user_id = data.id;
   return res.redirect("/urls");
 });
 
@@ -306,12 +310,12 @@ app.post("/register", (req, res) => {
 app.get("/login", (req, res) => {
 
   //If a user is signed in, redirect from this page
-  if (users[req.cookies["user_id"]]){
+  if (users[req.session.user_id]){
     return res.redirect("/urls");
   }
 
   const templateVars = {
-    user: users[req.cookies["user_id"]]
+    user: users[req.session.user_id]
   };
   return res.render("login", templateVars);
 });
@@ -322,7 +326,7 @@ app.post("/login", (req, res) => {
 
   if (error==="Incomplete") {
     const templateVars = {
-      user: users[req.cookies["user_id"]], 
+      user: users[req.session.user_id], 
       errorMessage: "Incomplete info, try again."
     };
     return res.status(400).render("error", templateVars);
@@ -330,7 +334,7 @@ app.post("/login", (req, res) => {
 
   if (error==="Email not found") {
     const templateVars = {
-      user: users[req.cookies["user_id"]], 
+      user: users[req.session.user_id], 
       errorMessage: "Email not found."
     };
     return res.status(403).render("error", templateVars);
@@ -338,13 +342,13 @@ app.post("/login", (req, res) => {
 
   if (error==="Wrong password") {
     const templateVars = {
-      user: users[req.cookies["user_id"]], 
+      user: users[req.session.user_id], 
       errorMessage: "Wrong password!"
     };
     return res.status(403).render("error", templateVars);
   }
 
-  res.cookie("user_id", id);
+  req.session.user_id = id;
   return res.redirect("/urls");
 });
 

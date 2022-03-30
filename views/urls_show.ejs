@@ -37,11 +37,21 @@
     <h1>Analytics</h1>
     <h5 class="card-title">Total visits: <%= totalVisits %></h5>
     <h5 class="card-title">Unique visitors: <%= uniqueVisitors %></h5>
-    <h5 class="card-title">List of all visits:</h5>
+    <!-- <h5 class="card-title">List of all visits:</h5> -->
 
-    <% for (let visit of visitDetails) { %>
-      User  <span style="color: #28A745"><%= visit.userID %></span> clicked this link on <span style="color: #28A745"><%= visit.timestamp %></span>
-      <br>
+    <% if (visitDetails.length===0) { %>
+
+      <h5 class="card-title">This URL has not been visited yet.</h5>
+
+    <% } else { %>
+
+      <h5 class="card-title">List of all visits:</h5>
+
+      <% for (let visit of visitDetails) { %>
+        User  <span style="color: #28A745"><%= visit.userID %></span> clicked this link on <span style="color: #28A745"><%= visit.timestamp %></span>
+        <br>
+      <% } %>
+      
     <% } %>
 
   </div>

@@ -41,14 +41,14 @@
 
     <% if (visitDetails.length===0) { %>
 
-      <h5 class="card-title">This URL has not been visited yet.</h5>
+      <h5 class="card-title">This tinyURL has not been visited yet.</h5>
 
     <% } else { %>
 
       <h5 class="card-title">List of all visits:</h5>
 
       <% for (let visit of visitDetails) { %>
-        User  <span style="color: #28A745"><%= visit.userID %></span> clicked this link on <span style="color: #28A745"><%= visit.timestamp %></span>
+        User  <span style="color: #28A745"><%= visit.userID %></span> clicked this tinyURL on <span style="color: #28A745"><%= visit.timestamp.day %></span> at <span style="color: #28A745"><%= visit.timestamp.time %> UTC</span> 
         <br>
       <% } %>
       

@@ -20,10 +20,9 @@ const {urlsForUser, generateRandomString, createUser, authenticateUser, getTimes
 const {users, urlDatabase} = require("./data");
 
 
-//----------ROUTES
+//----------GET ROUTES
 
-
-//Homepage
+//Display homepage
 app.get("/", (req, res) => {
   //Redirect depending on sign-in status
   if (users[req.session.user_id]){
@@ -90,6 +89,56 @@ app.get("/urls/:shortURL", (req, res) => {
 
   return res.render('urls_show', templateVars);
 });
+
+//Redirect from shortURL to longURL 
+app.get("/u/:shortURL", (req, res) => {
+  const shortURL = req.params.shortURL;
+  const longURL = urlDatabase[shortURL].longURL;
+
+  //Increase total visits
+  urlDatabase[shortURL].totalVisits++;
+
+  //If a new unique visitor, increment count and store cookie
+  if (!urlDatabase[shortURL].visitorCookies.includes(req.session.user_id)){
+    urlDatabase[shortURL].visitorCookies.push(req.session.user_id);
+    urlDatabase[shortURL].uniqueVisitors++;
+  }
+
+  //Record Visit Details
+  urlDatabase[shortURL].visitDetails.push({timestamp: getTimestamp(), userID: req.session.user_id});
+
+  // Redirect to long URL
+  res.redirect(longURL);
+});
+
+//Display registration page
+app.get("/register", (req, res) => {
+
+  //If a user is signed in, redirect from this page
+  if (users[req.session.user_id]){
+    return res.redirect("/urls");
+  }
+
+  const templateVars = {
+    user: users[req.session.user_id]
+  };
+  return res.render("register", templateVars);
+});
+
+//Display login page
+app.get("/login", (req, res) => {
+
+  //If a user is signed in, redirect from this page
+  if (users[req.session.user_id]){
+    return res.redirect("/urls");
+  }
+  const templateVars = {
+    user: users[req.session.user_id]
+  };
+  return res.render("login", templateVars);
+});
+
+//----------POST ROUTES
 
 //Add a new URL - generating a short string and updating database
 app.post("/urls", (req, res) => {
@@ -162,45 +211,10 @@ app.post("/urls/:shortURL", (req, res) => {
   return res.redirect("/urls");
 });
 
-//Redirect from shortURL to longURL 
-app.get("/u/:shortURL", (req, res) => {
-  const shortURL = req.params.shortURL;
-  const longURL = urlDatabase[shortURL].longURL;
-
-  //Increase total visits
-  urlDatabase[shortURL].totalVisits++;
-
-  //If a new unique visitor, increment count and store cookie
-  if (!urlDatabase[shortURL].visitorCookies.includes(req.session.user_id)){
-    urlDatabase[shortURL].visitorCookies.push(req.session.user_id);
-    urlDatabase[shortURL].uniqueVisitors++;
-  }
-
-  //Record Visit Details
-  urlDatabase[shortURL].visitDetails.push({timestamp: getTimestamp(), userID: req.session.user_id});
-
-  // Redirect to long URL
-  res.redirect(longURL);
-});
-
 //Logout
 app.post("/logout", (req, res) => {
   req.session = null;
   res.redirect("/urls");
-});
-
-//Display registration page
-app.get("/register", (req, res) => {
-
-  //If a user is signed in, redirect from this page
-  if (users[req.session.user_id]){
-    return res.redirect("/urls");
-  }
-
-  const templateVars = {
-    user: users[req.session.user_id]
-  };
-  return res.render("register", templateVars);
 });
 
 //Process a registration
@@ -228,19 +242,6 @@ app.post("/register", (req, res) => {
   //If no errors, set cookie and redirect to URLs index page
   req.session.user_id = data.id;
   return res.redirect("/urls");
-});
-
-//Display login page
-app.get("/login", (req, res) => {
-
-  //If a user is signed in, redirect from this page
-  if (users[req.session.user_id]){
-    return res.redirect("/urls");
-  }
-  const templateVars = {
-    user: users[req.session.user_id]
-  };
-  return res.render("login", templateVars);
 });
 
 //Process a login

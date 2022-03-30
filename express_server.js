@@ -114,6 +114,7 @@ app.post("/urls", (req, res) => {
     visitDetails: []
   }
 
+  //Redirect to show one URL
   return res.redirect(`/urls/${newShortURL}`);
 });
 
@@ -148,10 +149,16 @@ app.post("/urls/:shortURL", (req, res) => {
   }
 
   const newLongURL = req.body.longURL;
-  urlDatabase[shortURL] = {
-    longURL: newLongURL,
-    userID: req.session.user_id
-  }
+
+  //Change the longURL in the database
+  urlDatabase[shortURL].longURL = newLongURL;
+
+  //Reset analytics variables
+  urlDatabase[shortURL].totalVisits = 0;
+  urlDatabase[shortURL].uniqueVisitors = 0;
+  urlDatabase[shortURL].visitorCookies = [];
+  urlDatabase[shortURL].visitDetails = [];
+
   return res.redirect("/urls");
 });
 

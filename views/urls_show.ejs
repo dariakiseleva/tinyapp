@@ -40,7 +40,7 @@
     <h5 class="card-title">List of all visits:</h5>
 
     <% for (let visit of visitDetails) { %>
-      <%= visit.timestamp %> - <%= visit.userID %>
+      User  <span style="color: #28A745"><%= visit.userID %></span> clicked this link on <span style="color: #28A745"><%= visit.timestamp %></span>
       <br>
     <% } %>
 
